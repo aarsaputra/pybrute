@@ -1,76 +1,39 @@
-# PyBrute Login - Brute Force & Analyzer  
+````markdown
+# PyBrute
 
-PyBrute Login adalah tools multifungsi berbasis Python untuk:  
-1. **Analisis parameter form login (POST request analyzer).**  
-2. **Brute force login** menggunakan wordlist username & password.  
+Tools Dengan Cek data respon Post dan Brute force login
 
-Cocok digunakan untuk **pembelajaran penetration testing**, CTF, atau eksplorasi keamanan web (hanya untuk tujuan legal!).  
+## Disclaimer dan Etika
+**Penting:** Alat ini dapat digunakan untuk tujuan pengujian keamanan (penetration testing) tetapi juga dapat disalahgunakan untuk melakukan akses tanpa izin. Anda hanya boleh menjalankan alat ini pada target yang Anda miliki izin eksplisit untuk diuji.
 
----
+Sebelum menjalankan brute-force, jalankan dengan flag `--confirm-authorized` untuk mengonfirmasi bahwa Anda telah memperoleh izin. Penggunaan tanpa izin dapat melanggar hukum.
 
-## Fitur
-- Analisis otomatis form login (menampilkan method, action, input field).  
-- Ekstrak format `POST data` secara cepat untuk keperluan brute force.  
-- Brute force login dengan metode:  
-  - `threading` → menjalankan percobaan login per thread.  
-  - `concurrent` → menggunakan `ThreadPoolExecutor` (lebih cepat & efisien).  
-- Menampilkan progres percobaan login dalam persentase.  
+## Perbaikan pada versi ini
+- Penambahan CLI dengan argparse
+- Penanganan request yang lebih aman (timeout, session reuse, exception handling)
+- Parsing POST template yang lebih robust
+- Flag `--confirm-authorized` wajib untuk mode brute-force
 
----
+## Contoh penggunaan
+1. Analisa form dan dapatkan template POST (contoh):
 
-## Instalasi  
-
-Pastikan sudah install **Python 3.7+**.  
-
-Clone repository:  
 ```bash
-git clone https://github.com/aarsaputra/pybrute.git
-cd repo
+python pybrute.py --url "https://example.com/login" --analyze
 ```
-Install library yang dibutuhkan:
+
+Output akan memberikan saran format `--post "field1=value1&userfield=$user&passfield=$pass"`.
+
+2. Menjalankan brute-force (contoh):
+
 ```bash
-pip install requests beautifulsoup4
+python pybrute.py --url "https://example.com/login" \
+  --post "username=$user&password=$pass" \
+  --userlist users.txt --passlist passwords.txt \
+  --success "Welcome," --threads 5 --confirm-authorized
 ```
-#Cara Pakai
-**1. Analisis Parameter POST**
 
-Untuk menganalisis form login di suatu halaman:
-```bash
-python pybrute.py analyze -u http://target.com/login
-```
-Output yang ditampilkan:
-Method (GET/POST).
-Action (endpoint tujuan).
-Input field (name, type, default value).
-Contoh format POST data untuk brute force.
+## Dependensi
+- requests
+- beautifulsoup4
 
-**2. Brute Force Login**
-
-Jalankan brute force dengan wordlist username & password:
-```bash
-python pybrute.py bruteforce \
-    -H http://target.com/login \
-    -u user.txt \
-    -p pass.txt \
-    --post "log=$user&pwd=$pass" \
-    --respon "Welcome" \
-    --method concurrent
-```
-Parameter:
-
--H → URL target login.
-
--u → file berisi daftar username.
-
--p → file berisi daftar password.
-
---post → format data POST ($user untuk username, $pass untuk password).
-
---respon → teks respons yang menandakan login berhasil.
-
---method → threading atau concurrent (default: concurrent).
-
-
----
-
-
+````
