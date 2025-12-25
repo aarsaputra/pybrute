@@ -153,6 +153,11 @@ def is_success_response(resp, success_string=None):
     
     Returns:
         Boolean indicating success
+    
+    Note:
+        The status code 200 heuristic (checking for error keywords) may produce
+        false positives. For reliable detection, always provide a custom success_string
+        that uniquely identifies successful authentication (e.g., "Welcome", "Dashboard").
     """
     # Priority 1: Custom success string
     if success_string:
@@ -162,7 +167,7 @@ def is_success_response(resp, success_string=None):
         except Exception:
             pass
     
-    # Priority 2: Status code detection
+    # Priority 2: Status code detection (heuristic - may have false positives)
     if resp.status_code == 200:
         # Check for common error indicators
         error_keywords = ['error', 'invalid', 'wrong', 'incorrect', 'failed', 'gagal']
@@ -170,7 +175,7 @@ def is_success_response(resp, success_string=None):
         has_error = any(keyword in text_lower for keyword in error_keywords)
         
         if not has_error and not success_string:
-            # Likely success if 200 and no error keywords
+            # Likely success if 200 and no error keywords (heuristic)
             return True
     
     # Priority 3: Redirect detection (301/302)
@@ -252,9 +257,12 @@ def brute_force_threading(url, username_file, password_file, post_template, succ
     if otp_mode:
         log_output(f"[+] Mode OTP aktif - Generate OTP {otp_length} digit", level='normal')
         passwords = generate_otp_list(otp_length)
-        users = ['']  # Dummy username for OTP mode
+        users = ['otp_user']  # Placeholder username for OTP mode
     else:
         # Read username and password lists
+        if not username_file or not password_file:
+            log_output('[!] Username file dan password file diperlukan untuk mode normal.', level='normal')
+            return
         with open(username_file, 'r', encoding='utf-8') as f:
             users = [l.strip() for l in f if l.strip()]
         with open(password_file, 'r', encoding='utf-8') as f:
@@ -281,10 +289,12 @@ def brute_force_threading(url, username_file, password_file, post_template, succ
     # Setup signal handler for Ctrl+C
     def signal_handler(sig, frame):
         log_output('\n[!] Ctrl+C terdeteksi - Menyimpan checkpoint...', level='silent')
-        if attempt_counter > 0:
-            # Save current state
-            current_user = users[attempt_counter // len(passwords) % len(users)]
-            current_pass = passwords[attempt_counter % len(passwords)]
+        if attempt_counter > 0 and len(users) > 0 and len(passwords) > 0:
+            # Save current state with bounds checking
+            user_idx = (attempt_counter - 1) // len(passwords) % len(users)
+            pass_idx = (attempt_counter - 1) % len(passwords)
+            current_user = users[user_idx] if user_idx < len(users) else users[0]
+            current_pass = passwords[pass_idx] if pass_idx < len(passwords) else passwords[0]
             save_checkpoint(attempt_counter, total_attempts, current_user, current_pass)
             log_output(f'[+] Checkpoint tersimpan. Gunakan --resume untuk melanjutkan.', level='silent')
         sys.exit(0)
@@ -298,7 +308,7 @@ def brute_force_threading(url, username_file, password_file, post_template, succ
                 attempt_counter += 1
                 
                 # Skip if before checkpoint
-                if attempt_counter < start_index:
+                if attempt_counter <= start_index:
                     continue
                 
                 future = exc.submit(brute_force_attempt, session, url, u, p, post_template, success_response, attempt_counter, total_attempts, timeout)
