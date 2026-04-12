@@ -1,0 +1,27 @@
+{
+  "patterns": {
+    "200_9871": {
+      "count": 11,
+      "status": 200,
+      "length": 9871,
+      "sample_passwords": [
+        "0005",
+        "0000",
+        "0008",
+        "0010",
+        "0007",
+        "0006",
+        "0003",
+        "0004",
+        "0002",
+        "0001"
+      ],
+      "sample_response": "<!DOCTYPE html>\n<html lang=\"id\" class=\"scroll-smooth\">\n\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>MerdekaSiber Playground | Red Team Labs</title>\n    <script src=\"https://cdn.tailwindcss.com\"></script>\n    <!-- Google Fonts: Outfit for modern tech look -->\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n    <link\n        href=\"http"
+    }
+  },
+  "statistics": {
+    "total_attempts": 11,
+    "unique_patterns": 1,
+    "timestamp": "2025-12-25T01:20:40.830807"
+  }
+}
